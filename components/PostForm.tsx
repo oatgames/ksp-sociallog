@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { PostEntry } from '../types';
 import { Button } from './Button';
-import { generateHashtags } from '../services/geminiService';
 
 interface PostFormProps {
   onSave: (post: PostEntry) => Promise<void>;
@@ -12,7 +11,6 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
   const [imageData, setImageData] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,26 +29,6 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
     setImageData(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
-    }
-  };
-
-  const handleGenerateTags = async () => {
-    if (!description && !imageData) {
-      alert('กรุณากรอกรายละเอียด หรืออัปโหลดรูปภาพก่อนให้ AI ช่วยคิด');
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      const suggestedTags = await generateHashtags(description, imageData);
-      setTags(prev => {
-        const separator = prev ? ' ' : '';
-        return prev + separator + suggestedTags;
-      });
-    } catch (error) {
-      console.error("Failed to generate tags", error);
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -159,23 +137,9 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
 
         {/* 3. SEO / Hashtags */}
         <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="block text-sm font-medium text-slate-700">
-              3. SEO หรือ แฮชแท็ก
-            </label>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              onClick={handleGenerateTags}
-              isLoading={isGenerating}
-              className="text-xs px-2 py-1 h-8"
-            >
-              <svg className="w-4 h-4 mr-1 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              ใช้ AI ช่วยคิด
-            </Button>
-          </div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            3. SEO หรือ แฮชแท็ก
+          </label>
           <div className="relative">
              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                <span className="text-slate-400">#</span>
@@ -188,7 +152,6 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
               onChange={(e) => setTags(e.target.value)}
             />
           </div>
-          <p className="text-xs text-slate-500 mt-1">AI จะวิเคราะห์จากรูปภาพและข้อความด้านบน</p>
         </div>
 
         {/* Actions */}
