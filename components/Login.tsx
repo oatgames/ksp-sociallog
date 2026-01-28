@@ -107,6 +107,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           email: u.Email || u.email || '',
           avatarUrl: u.Picture || u.picture || u.avatarUrl || u.Avatar || u.ImageURL || u.PhotoURL || undefined,
           employeeCode: data.employee?.EmployeeCode || data.employee?.employee_code || undefined,
+          nickname: data.employee?.Nickname || undefined,
         };
 
         console.log('[Login] Mapped user:', mapped);

@@ -1,15 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PostEntry } from '../types';
+import { fetchDriveImageAsBase64 } from '../services/socialLogService';
 
 interface PostListProps {
   posts: PostEntry[];
   onDelete: (id: string) => void;
+  currentUserEmail: string;
+  loadedImages: Map<string, string>; // รับจาก parent
+  setLoadedImages: React.Dispatch<React.SetStateAction<Map<string, string>>>; // รับจาก parent
 }
 
-export const PostList: React.FC<PostListProps> = ({ posts, onDelete }) => {
+export const PostList: React.FC<PostListProps> = ({ 
+  posts, 
+  onDelete, 
+  currentUserEmail, 
+  loadedImages, 
+  setLoadedImages 
+}) => {
   const [selectedPost, setSelectedPost] = useState<PostEntry | null>(null);
 
-  if (posts.length === 0) {
+  // กรองเฉพาะโพสต์ของ user ที่ login
+  const userPosts = posts.filter(post => post.createdByEmail === currentUserEmail);
+
+  // โหลดรูปภาพเฉพาะของ user ที่ login
+  useEffect(() => {
+    const loadImages = async () => {
+      const newImages = new Map<string, string>();
+      
+      for (const post of userPosts) {
+        // ข้ามถ้าโหลดไว้แล้ว
+        if (post.imageFileId && !loadedImages.has(post.id)) {
+          try {
+            const imageData = await fetchDriveImageAsBase64(post.imageFileId);
+            if (imageData) {
+              newImages.set(post.id, imageData);
+            }
+          } catch (error) {
+            console.error(`Failed to load image for post ${post.id}:`, error);
+          }
+        }
+      }
+      
+      if (newImages.size > 0) {
+        setLoadedImages(prev => new Map([...prev, ...newImages]));
+      }
+    };
+
+    if (userPosts.length > 0) {
+      loadImages();
+    }
+  }, [posts, currentUserEmail]); // ลบ userPosts ออก ใช้ posts แทน
+
+  if (userPosts.length === 0) {
     return (
       <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-slate-200">
         <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
@@ -29,7 +71,7 @@ export const PostList: React.FC<PostListProps> = ({ posts, onDelete }) => {
         <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        ประวัติการโพสต์ ({posts.length})
+        ประวัติการโพสต์ ({userPosts.length})
       </h2>
       
       {/* Table View */}
@@ -45,6 +87,9 @@ export const PostList: React.FC<PostListProps> = ({ posts, onDelete }) => {
                   วันที่
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  ประเภท
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   คำบรรยาย
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -56,7 +101,7 @@ export const PostList: React.FC<PostListProps> = ({ posts, onDelete }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
-              {posts.map((post) => (
+              {userPosts.map((post) => (
                 <tr 
                   key={post.id} 
                   onClick={() => setSelectedPost(post)}
@@ -64,12 +109,19 @@ export const PostList: React.FC<PostListProps> = ({ posts, onDelete }) => {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="h-12 w-12 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
-                      {post.imageData ? (
+                      {loadedImages.get(post.id) ? (
                         <img 
-                          src={post.imageData} 
+                          src={loadedImages.get(post.id)} 
                           alt="Post thumbnail" 
                           className="w-full h-full object-cover" 
                         />
+                      ) : post.imageFileId ? (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400">
+                          <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </div>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-slate-400">
                           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -93,6 +145,13 @@ export const PostList: React.FC<PostListProps> = ({ posts, onDelete }) => {
                         minute: '2-digit' 
                       })}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {post.postType && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {post.postType}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-slate-900 line-clamp-2 max-w-md">
@@ -161,10 +220,10 @@ export const PostList: React.FC<PostListProps> = ({ posts, onDelete }) => {
             {/* Modal Content */}
             <div className="p-6 space-y-6">
               {/* Image */}
-              {selectedPost.imageData && (
+              {loadedImages.get(selectedPost.id) && (
                 <div className="rounded-lg overflow-hidden bg-slate-100">
                   <img 
-                    src={selectedPost.imageData} 
+                    src={loadedImages.get(selectedPost.id)} 
                     alt="Post content" 
                     className="w-full h-auto max-h-96 object-contain mx-auto" 
                   />
@@ -184,6 +243,34 @@ export const PostList: React.FC<PostListProps> = ({ posts, onDelete }) => {
                   })}
                 </div>
               </div>
+
+              {/* Post Type */}
+              {selectedPost.postType && (
+                <div>
+                  <div className="text-xs font-medium text-slate-500 mb-1">ประเภทงานโพสต์</div>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    {selectedPost.postType}
+                  </span>
+                </div>
+              )}
+
+              {/* Post URL */}
+              {selectedPost.postUrl && (
+                <div>
+                  <div className="text-xs font-medium text-slate-500 mb-1">ลิงก์โพสต์</div>
+                  <a 
+                    href={selectedPost.postUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+                  >
+                    {selectedPost.postUrl}
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              )}
 
               {/* Description */}
               <div>

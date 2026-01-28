@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { PostEntry } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { PostEntry, PostType } from '../types';
 import { Button } from './Button';
+import { getPostTypes } from '../services/socialLogService';
 
 interface PostFormProps {
   onSave: (post: PostEntry) => Promise<void>;
@@ -10,9 +11,21 @@ interface PostFormProps {
 export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false }) => {
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
+  const [postType, setPostType] = useState('');
+  const [postUrl, setPostUrl] = useState('');
   const [imageData, setImageData] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [postTypes, setPostTypes] = useState<PostType[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch post types on mount
+  useEffect(() => {
+    const fetchTypes = async () => {
+      const types = await getPostTypes();
+      setPostTypes(types);
+    };
+    fetchTypes();
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,6 +57,8 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
       imageData,
       description,
       tags,
+      postType,
+      postUrl,
       timestamp: Date.now(),
     };
 
@@ -55,6 +70,8 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
       
       // Reset form after short delay
       setTimeout(() => {
+        setPostType('');
+        setPostUrl('');
         setDescription('');
         setTags('');
         setImageData(null);
@@ -121,10 +138,57 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
           </div>
         </div>
 
-        {/* 2. Description */}
+        {/* 2. Post Type Dropdown */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            2. รายละเอียดโพสต์
+            2. ประเภทงานโพสต์
+          </label>
+          <div className="relative">
+            <select
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white"
+              value={postType}
+              onChange={(e) => setPostType(e.target.value)}
+            >
+              <option value="">เลือกประเภทงาน</option>
+              {postTypes.map((type) => (
+                <option key={type.type_id} value={type.type_name}>
+                  {type.type_name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Post URL */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            3. ลิงก์โพสต์
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            </div>
+            <input
+              type="url"
+              className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              placeholder="https://example.com/post/123"
+              value={postUrl}
+              onChange={(e) => setPostUrl(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* 4. Description */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            4. รายละเอียดโพสต์
           </label>
           <textarea
             rows={5}
@@ -135,10 +199,10 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
           />
         </div>
 
-        {/* 3. SEO / Hashtags */}
+        {/* 5. SEO / Hashtags */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            3. SEO หรือ แฮชแท็ก
+            5. SEO หรือ แฮชแท็ก
           </label>
           <div className="relative">
              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

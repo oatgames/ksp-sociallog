@@ -3,10 +3,10 @@ import { User, PostEntry, ViewState } from './types';
 import { Login } from './components/Login';
 import { PostForm } from './components/PostForm';
 import { PostList } from './components/PostList';
+import { Dashboard } from './components/Dashboard';
 import { Button } from './components/Button';
-import { savePostToBackend, getPostsFromBackend, deletePostFromBackend } from './services/socialLogService';
+import { savePostToBackend, getPostsFromBackend, deletePostFromBackend, getAllEmployees } from './services/socialLogService';
 
-const STORAGE_KEY_POSTS = 'sociallog_posts';
 const STORAGE_KEY_USER = 'sociallog_user';
 
 const App: React.FC = () => {
@@ -14,19 +14,18 @@ const App: React.FC = () => {
   const [viewState, setViewState] = useState<ViewState>(ViewState.LOGIN);
   const [posts, setPosts] = useState<PostEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [employeeNicknames, setEmployeeNicknames] = useState<Map<string, string>>(new Map());
+  const [loadedImages, setLoadedImages] = useState<Map<string, string>>(new Map()); // Cache รูปที่โหลดแล้ว
 
   // Initialize
   useEffect(() => {
     const initializeApp = async () => {
-      // Load posts from local storage first
-      const savedPosts = localStorage.getItem(STORAGE_KEY_POSTS);
-      if (savedPosts) {
-        try {
-          setPosts(JSON.parse(savedPosts));
-        } catch (e) {
-          console.error("Failed to parse posts");
-        }
-      }
+      // ไม่เก็บ posts ใน localStorage เพราะมีรูปภาพเยอะ จะทำให้ localStorage เต็ม
+      // ดึงจาก Backend ทุกครั้งแทน
+
+      // โหลดข้อมูลพนักงานทั้งหมดตั้งแต่เริ่มต้น
+      const nicknames = await getAllEmployees();
+      setEmployeeNicknames(nicknames);
 
       // Check login session
       const savedUser = localStorage.getItem(STORAGE_KEY_USER);
@@ -50,6 +49,12 @@ const App: React.FC = () => {
     console.log('[App] Saved to localStorage:', JSON.parse(localStorage.getItem(STORAGE_KEY_USER) || '{}'));
     setViewState(ViewState.FORM);
     
+    // โหลดข้อมูลพนักงานทั้งหมด (ถ้ายังไม่มี)
+    if (employeeNicknames.size === 0) {
+      const nicknames = await getAllEmployees();
+      setEmployeeNicknames(nicknames);
+    }
+    
     // Load posts from backend
     await loadPostsFromBackend(newUser.email);
   };
@@ -65,7 +70,7 @@ const App: React.FC = () => {
     try {
       const backendPosts = await getPostsFromBackend(email);
       setPosts(backendPosts);
-      localStorage.setItem(STORAGE_KEY_POSTS, JSON.stringify(backendPosts));
+      // ไม่เก็บใน localStorage เพราะมีรูปภาพเยอะจะทำให้เต็ม
     } catch (error) {
       console.error('Failed to load posts:', error);
     } finally {
@@ -82,10 +87,8 @@ const App: React.FC = () => {
       const result = await savePostToBackend(post, user.email, user.employeeCode);
       
       if (result.success) {
-        // Update local state
-        const updatedPosts = [post, ...posts];
-        setPosts(updatedPosts);
-        localStorage.setItem(STORAGE_KEY_POSTS, JSON.stringify(updatedPosts));
+        // Update local state - reload from backend to get fresh data
+        await loadPostsFromBackend(user.email);
         setViewState(ViewState.LIST); // Switch to list view to show success
       } else {
         alert(`เกิดข้อผิดพลาด: ${result.message || 'ไม่สามารถบันทึกข้อมูลได้'}`);
@@ -108,10 +111,8 @@ const App: React.FC = () => {
         const result = await deletePostFromBackend(id, user.email);
         
         if (result.success) {
-          // Update local state
-          const updatedPosts = posts.filter(p => p.id !== id);
-          setPosts(updatedPosts);
-          localStorage.setItem(STORAGE_KEY_POSTS, JSON.stringify(updatedPosts));
+          // Reload from backend to get fresh data
+          await loadPostsFromBackend(user.email);
           alert('ลบข้อมูลสำเร็จ!');
         } else {
           alert(`เกิดข้อผิดพลาด: ${result.message || 'ไม่สามารถลบข้อมูลได้'}`);
@@ -211,7 +212,17 @@ const App: React.FC = () => {
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            รายการข้อมูล ({posts.length})
+            รายการข้อมูล ({posts.filter(p => p.createdByEmail === user?.email).length})
+          </button>
+          <button 
+            onClick={() => setViewState(ViewState.DASHBOARD)}
+            className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+              viewState === ViewState.DASHBOARD 
+                ? 'border-indigo-600 text-indigo-600' 
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Dashboard
           </button>
         </div>
 
@@ -221,8 +232,21 @@ const App: React.FC = () => {
             <div className="max-w-3xl mx-auto">
               <PostForm onSave={handleSavePost} isSubmitting={isLoading} />
             </div>
+          ) : viewState === ViewState.LIST ? (
+            <PostList 
+              posts={posts} 
+              onDelete={handleDeletePost} 
+              currentUserEmail={user?.email || ''} 
+              loadedImages={loadedImages}
+              setLoadedImages={setLoadedImages}
+            />
           ) : (
-            <PostList posts={posts} onDelete={handleDeletePost} />
+            <Dashboard 
+              posts={posts} 
+              userName={user?.name || 'User'} 
+              employeeNicknames={employeeNicknames}
+              currentUserEmail={user?.email || ''} 
+            />
           )}
         </div>
       </main>
