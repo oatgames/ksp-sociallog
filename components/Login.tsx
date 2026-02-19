@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
+import { fetchDriveImageAsBase64 } from '../services/socialLogService';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -16,6 +17,37 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const googleButtonRef = useRef<HTMLDivElement>(null);
+
+  const normalizeAvatarUrl = (url?: string): string | undefined => {
+    if (!url) return undefined;
+    const trimmed = String(url).trim();
+    if (!trimmed) return undefined;
+
+    // Already a direct image or data URL
+    if (trimmed.startsWith('data:')) return trimmed;
+
+    // Google Drive share links -> direct view URL
+    const driveMatch =
+      trimmed.match(/https?:\/\/drive\.google\.com\/file\/d\/([^/]+)\//i) ||
+      trimmed.match(/https?:\/\/drive\.google\.com\/open\?id=([^&]+)/i) ||
+      trimmed.match(/https?:\/\/drive\.google\.com\/uc\?id=([^&]+)/i);
+    if (driveMatch && driveMatch[1]) {
+      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+    }
+
+    return trimmed;
+  };
+
+  const extractDriveFileId = (url?: string): string | null => {
+    if (!url) return null;
+    const trimmed = String(url).trim();
+    if (!trimmed) return null;
+    const match =
+      trimmed.match(/https?:\/\/drive\.google\.com\/file\/d\/([^/]+)\//i) ||
+      trimmed.match(/https?:\/\/drive\.google\.com\/open\?id=([^&]+)/i) ||
+      trimmed.match(/https?:\/\/drive\.google\.com\/uc\?id=([^&]+)/i);
+    return match && match[1] ? match[1] : null;
+  };
 
   useEffect(() => {
     let retryCount = 0;
@@ -92,6 +124,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (data.ok && data.user) {
         // Map backend user to local User shape
         const u = data.user;
+        const emp = data.employee || {};
         console.log('[Login] Checking avatar fields:', {
           Picture: u.Picture,
           picture: u.picture,
@@ -99,16 +132,42 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           Avatar: u.Avatar,
           ImageURL: u.ImageURL,
           PhotoURL: u.PhotoURL,
+          ProfilePhotoLink: emp.ProfilePhotoLink,
         });
         
         const mapped: User = {
           id: u.UserID || u.id || u.sub || (u.Email || u.email) || 'unknown',
           name: u.Name || u.FullName || u.name || u.Email || u.email || 'User',
           email: u.Email || u.email || '',
-          avatarUrl: u.Picture || u.picture || u.avatarUrl || u.Avatar || u.ImageURL || u.PhotoURL || undefined,
+          avatarUrl: normalizeAvatarUrl(
+            u.Picture ||
+            u.picture ||
+            u.avatarUrl ||
+            u.Avatar ||
+            u.ImageURL ||
+            u.PhotoURL ||
+            emp.ProfilePhotoLink ||
+            undefined
+          ),
           employeeCode: data.employee?.EmployeeCode || data.employee?.employee_code || undefined,
           nickname: data.employee?.Nickname || undefined,
         };
+
+        // If Picture is missing, fall back to ProfilePhotoLink and proxy+base64 it.
+        if (!mapped.avatarUrl) {
+          const profileLink = emp.ProfilePhotoLink || '';
+          const driveFileId = extractDriveFileId(profileLink);
+          if (driveFileId) {
+            try {
+              const dataUri = await fetchDriveImageAsBase64(driveFileId);
+              if (dataUri) {
+                mapped.avatarUrl = dataUri;
+              }
+            } catch (e) {
+              console.warn('[Login] Failed to fetch profile photo as base64:', e);
+            }
+          }
+        }
 
         console.log('[Login] Mapped user:', mapped);
         onLogin(mapped);

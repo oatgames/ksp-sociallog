@@ -31,5 +31,6 @@ export enum ViewState {
   LOGIN,
   FORM,
   LIST,
-  DASHBOARD
+  DASHBOARD,
+  CLIPBOARD
 }

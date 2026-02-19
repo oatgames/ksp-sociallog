@@ -4,6 +4,7 @@ import { Login } from './components/Login';
 import { PostForm } from './components/PostForm';
 import { PostList } from './components/PostList';
 import { Dashboard } from './components/Dashboard';
+import { ClipboardTab } from './components/ClipboardTab';
 import { Button } from './components/Button';
 import { savePostToBackend, getPostsFromBackend, deletePostFromBackend, getAllEmployees } from './services/socialLogService';
 
@@ -224,6 +225,16 @@ const App: React.FC = () => {
           >
             Dashboard
           </button>
+          <button 
+            onClick={() => setViewState(ViewState.CLIPBOARD)}
+            className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+              viewState === ViewState.CLIPBOARD 
+                ? 'border-indigo-600 text-indigo-600' 
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            คัดลอกข้อมูล
+          </button>
         </div>
 
         {/* Content View */}
@@ -240,13 +251,15 @@ const App: React.FC = () => {
               loadedImages={loadedImages}
               setLoadedImages={setLoadedImages}
             />
-          ) : (
+          ) : viewState === ViewState.DASHBOARD ? (
             <Dashboard 
               posts={posts} 
               userName={user?.name || 'User'} 
               employeeNicknames={employeeNicknames}
               currentUserEmail={user?.email || ''} 
             />
+          ) : (
+            <ClipboardTab />
           )}
         </div>
       </main>
