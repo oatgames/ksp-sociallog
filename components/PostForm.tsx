@@ -121,7 +121,7 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
             onPaste={handlePasteImage}
             onClick={(e) => { (e.currentTarget as HTMLDivElement).focus(); }}
             tabIndex={0}
-            className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors outline-none ${imageData ? 'border-indigo-300 bg-indigo-50' : 'border-slate-300 hover:border-indigo-400 bg-slate-50'}`}
+            className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 ${imageData ? 'border-indigo-300 bg-indigo-50' : 'border-slate-300 hover:border-indigo-400 bg-slate-50'}`}
           >
             <input 
               type="file" 
