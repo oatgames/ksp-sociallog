@@ -38,6 +38,24 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
     }
   };
 
+  const handlePasteImage = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (const item of items) {
+      if (item.type.indexOf("image") !== -1) {
+        const blob = item.getAsFile();
+        if (blob) {
+          e.preventDefault();
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImageData(reader.result as string);
+          };
+          reader.readAsDataURL(blob);
+        }
+        return;
+      }
+    }
+  };
+
   const handleRemoveImage = () => {
     setImageData(null);
     if (fileInputRef.current) {
@@ -99,7 +117,12 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
           <label className="block text-sm font-medium text-slate-700 mb-2">
             1. รูปภาพประกอบ (ถ้ามี)
           </label>
-          <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors ${imageData ? 'border-indigo-300 bg-indigo-50' : 'border-slate-300 hover:border-indigo-400 bg-slate-50'}`}>
+          <div
+            onPaste={handlePasteImage}
+            onClick={(e) => { (e.currentTarget as HTMLDivElement).focus(); }}
+            tabIndex={0}
+            className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors outline-none ${imageData ? 'border-indigo-300 bg-indigo-50' : 'border-slate-300 hover:border-indigo-400 bg-slate-50'}`}
+          >
             <input 
               type="file" 
               accept="image/*" 
@@ -109,14 +132,18 @@ export const PostForm: React.FC<PostFormProps> = ({ onSave, isSubmitting = false
             />
             
             {!imageData ? (
-              <div className="text-center cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+              <div className="text-center">
                 <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                   <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <div className="flex text-sm text-slate-600 justify-center mt-2">
-                  <span className="relative rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="relative rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
                     อัปโหลดไฟล์
-                  </span>
+                  </button>
                   <p className="pl-1">หรือลากวางที่นี่</p>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">PNG, JPG, GIF up to 5MB</p>
