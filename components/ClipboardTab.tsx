@@ -46,6 +46,7 @@ const DEFAULT_ITEMS: ClipboardItem[] = [
     label: 'รับสมัครพนักงาน (ช่างไม้)',
     value:
       'KSP Wooden Box รับสมัครพนักงานประจำ/parttime/ฟรีแลนซ์\n' +
+      'บริษัท รับผลิตและจำหน่ายกล่องไม้แพคเกจสินค้าจากไม้และงานไม้ฝีมือปราณีต\n\n' +
       '🔨 ช่างไม้ / ผู้ช่วยช่างไม้\n\n' +
       'รายได้\n' +
       '• ทดลองงาน 400 บาท/วัน\n' +
@@ -79,7 +80,8 @@ const DEFAULT_ITEMS: ClipboardItem[] = [
     id: 'clip_ksp_jobpost_cnc_laser_v1',
     label: 'รับสมัครพนักงาน (CNC / Laser)',
     value:
-      'KSP Wooden Box รับสมัครพนักงานประจำ/parttime/ฟรีแลนซ์\n\n' +
+      'KSP Wooden Box รับสมัครพนักงานประจำ/parttime/ฟรีแลนซ์\n' +
+      'บริษัท รับผลิตและจำหน่ายกล่องไม้แพคเกจสินค้าจากไม้และงานไม้ฝีมือปราณีต\n\n' +
       'ตำแหน่ง:\n' +
       '🪚 CNC Operator / ผู้ช่วยช่าง CNC\n' +
       '🔦 CO₂ Laser Operator / ผู้ช่วยช่างเลเซอร์\n\n' +
@@ -122,7 +124,8 @@ const DEFAULT_ITEMS: ClipboardItem[] = [
     id: 'clip_ksp_jobpost_admin_cs_v1',
     label: 'รับสมัครพนักงาน (Admin & Customer Service)',
     value:
-      'KSP Wooden Box รับสมัครพนักงานประจำ/parttime/ฟรีแลนซ์\n\n' +
+      'KSP Wooden Box รับสมัครพนักงานประจำ/parttime/ฟรีแลนซ์\n' +
+      'บริษัท รับผลิตและจำหน่ายกล่องไม้แพคเกจสินค้าจากไม้และงานไม้ฝีมือปราณีต\n\n' +
       'ตำแหน่ง: 🪶 Admin & Customer Service Representative\n' +
       '(เจ้าหน้าที่ธุรการและบริการลูกค้า)\n\n' +
       'รายได้\n' +
